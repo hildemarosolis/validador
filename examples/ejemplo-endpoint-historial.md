@@ -1,14 +1,14 @@
 # Ejemplo: NO-GO por mal timing
 
-Caso típico del uso real de `validador`. La idea es técnicamente buena, pero el filtro la detiene por timing — hay trabajo abierto que se ampliaría sin necesidad.
+Caso típico. La idea es técnicamente buena, pero el filtro la detiene por timing: hay trabajo abierto que se ampliaría sin necesidad.
 
 ---
 
 ## Input (en una sesión activa de Claude Code)
 
-> "Vamos a añadir un endpoint en Exterior OS que devuelva el historial completo de cambios de un expediente. Sería útil para la auditoría y para que el frontend muestre una timeline."
+> "Vamos a añadir un endpoint que devuelva el historial completo de cambios de un pedido. Sería útil para resolver reclamaciones y para que la web muestre una línea de tiempo."
 
-Usuario invoca `/validador` antes de que Claude empiece a planear nada.
+El usuario invoca `/validador` antes de que Claude empiece a planear nada.
 
 ---
 
@@ -16,52 +16,52 @@ Usuario invoca `/validador` antes de que Claude empiece a planear nada.
 
 ## 1. Qué entendí
 
-Quieres exponer un endpoint en Exterior OS que devuelva el historial completo de cambios de un expediente. Asumo que esto implica también modelar el storage de los cambios — un endpoint sin tabla detrás no tiene de dónde leer. No mencionaste el storage; voy a tratarlo como parte de la propuesta porque no se puede separar.
+Quieres exponer un endpoint que devuelva el historial completo de cambios de un pedido de tu tienda. Asumo que esto implica también guardar esos cambios: un endpoint sin tabla detrás no tiene de dónde leer. No mencionaste dónde se guardan; lo trato como parte de la propuesta porque no se puede separar.
 
 ## 2. Opinión franca
 
-La idea es buena para auditoría regulatoria y para construir una timeline frontend. Pero estás resolviendo el caso fácil (lectura) antes de tener resuelto el difícil (escritura estructurada de los cambios). Mal orden. Si construyes el endpoint primero, vas a terminar volviendo a tocarlo cuando el storage cambie.
+La idea es buena para resolver reclamaciones y para construir una línea de tiempo en la web. Pero estás resolviendo el caso fácil (lectura) antes de tener resuelto el difícil (escritura estructurada de los cambios). Mal orden. Si construyes el endpoint primero, vas a volver a tocarlo cuando cambie la forma de guardar.
 
 ## 3. Mejoras posibles
 
-- Antes del endpoint, define el schema de `expediente_cambios`: ¿qué se guarda exactamente, quién, cuándo, qué transición? Esto debería ser el primer paso, no el segundo.
-- Decide si esto es **append-only event log** (todos los cambios, con causa) o **snapshots** (estado en momento X). Afecta todo lo demás. Si es event log, alinéalo con el patrón append-only que ya usas en `AMIGOS-GROUP-ECOSISTEMA/BITACORA.md`.
+- Antes del endpoint, define el schema de `pedido_cambios`: ¿qué se guarda exactamente, quién, cuándo, qué transición? Esto debería ser el primer paso, no el segundo.
+- Decide si esto es un **append-only event log** (todos los cambios, con su causa) o **snapshots** (el estado en un momento dado). Afecta a todo lo demás.
 
 ## 4. Viabilidad técnica
 
-Con tu stack (Next.js 16 + Supabase + Drizzle) es directo:
-- 1 migración para `expediente_cambios` con FK a `expediente`
-- 1 trigger en `expediente` (o wrapper en server actions) para escribir los cambios
+Con tu stack (Next.js + Supabase) es directo:
+- 1 migración para `pedido_cambios` con FK a `pedidos`
+- 1 trigger en `pedidos` (o un wrapper en las server actions) para escribir los cambios
 - 1 server action / API route para leer
 
-Tiempo realista: 4-6 horas si lo haces solo, incluyendo tests. No requiere dependencias nuevas, no requiere API externa.
+Tiempo realista: 4-6 horas si lo haces solo, incluidos los tests. No requiere dependencias nuevas ni API externas.
 
 ## 5. Qué se rompe
 
-- La tabla `expediente` ya tiene **3 sitios** que la mutan (crear expediente vía puente, marcar evento administrativo, cerrar expediente). Los tres necesitan envolverse en una transacción que escriba también en `expediente_cambios`.
-- Tests de `expediente.update()` van a fallar hasta que se actualicen. Estimar +2h adicionales solo en arreglar tests.
-- El **contrato del puente** Amigos→Exterior no se ve afectado — `POST /api/bridge/expedientes` sigue igual.
-- RLS: la nueva tabla necesita policies; si no las defines de entrada, expones cambios de un expediente a personas que no deberían verlo.
+- La tabla `pedidos` ya tiene **3 sitios** que la mutan (crear pedido, cambiar estado, cancelar). Los tres necesitan envolverse en una transacción que escriba también en `pedido_cambios`.
+- Los tests de `pedidos.update()` van a fallar hasta que se actualicen. Calcula unas 2 horas más solo para arreglarlos.
+- La API que usa la app móvil no se ve afectada: sigue igual.
+- Permisos: la tabla nueva necesita sus reglas de acceso desde el principio. Si no las defines de entrada, expones los cambios de un pedido a personas que no deberían verlos.
 
 ## 6. ¿Es prudente AHORA?
 
 **NO.** Razones concretas:
 
-- **Slice 15 sigue abierto** (Kanban). Este trabajo lo amplía ~30% en alcance.
-- **Slice 17 (Portal Cliente) depende de Slice 15 cerrado.** Si extiendes 15, retrasa 17.
-- Hoy en esta sesión ya construiste 2 cosas (`detector-humo`, este ejemplo). Tu energía técnica para una migración + tres refactors + tests está abajo.
-- Este endpoint no desbloquea ningún flujo de cliente esta semana. Auditoría es importante pero no urgente.
+- **La integración de pagos sigue abierta.** Este trabajo la amplía ~30 % en alcance.
+- **Los envíos dependen de cerrar pagos.** Si alargas pagos, retrasas envíos.
+- Hoy en esta sesión ya construiste dos cosas. La energía técnica para una migración, tres refactors y sus tests está baja.
+- Este endpoint no desbloquea ningún flujo de cliente esta semana. Es importante, pero no urgente.
 
-Cuando sí: después de cerrar Slice 15, meterlo como **Slice 16 explícito** con scope claro. Probablemente en 7-10 días.
+Cuándo sí: después de cerrar pagos, como una fase explícita con alcance claro. Probablemente en 7-10 días.
 
 ---
 
-**VEREDICTO: NO-GO** — buena idea, mal momento. Reanudar después de cerrar Slice 15, no antes.
+**VEREDICTO: NO-GO** — buena idea, mal momento. Retomar después de cerrar pagos, no antes.
 
 ---
 
 ## Lo que pasaría sin `validador`
 
-Sin el filtro, la respuesta default de Claude habría sido algo como: *"¡Perfecto! Vamos a empezar por crear la migración. Aquí está el archivo SQL..."* — y a las 3 horas el usuario tiene un branch a medias, Slice 15 sin cerrar, y dos refactors de tests pendientes sin que nadie haya pensado si era el momento.
+Sin el filtro, la respuesta por defecto de Claude habría sido algo como: *"¡Perfecto! Vamos a empezar por crear la migración. Aquí está el archivo SQL..."* — y a las 3 horas el usuario tiene una rama a medias, pagos sin cerrar y dos refactors de tests pendientes, sin que nadie se haya preguntado si era el momento.
 
 Ese es el costo real que `validador` cobra antes del primer commit.

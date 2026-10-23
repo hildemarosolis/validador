@@ -85,7 +85,7 @@ Si no rompe nada, dilo claro. Es el caso ideal, raro.
 La pregunta más importante. Una idea técnicamente buena en mal momento es deuda futura.
 
 Considerar:
-- **Lo que el usuario ya tiene abierto**: ¿hay pendientes pesados que se postergan si arranca esto? (Ej: D-007 sin cerrar, slices sin terminar, audits sin hacer).
+- **Lo que el usuario ya tiene abierto**: ¿hay pendientes pesados que se postergan si arranca esto? (Ej: una decisión pendiente sin cerrar, una fase a medias, una revisión sin hacer).
 - **Energía y contexto disponibles**: ¿esto cabe en lo que queda de día / semana, o va a quedar a medias y sangrando?
 - **Costo de interrupción**: ¿es algo que se puede pausar limpio, o si lo arrancas hay que terminarlo o queda peor que como estaba?
 - **Dependencias bloqueantes**: ¿necesitas decisiones / aprobaciones / datos externos antes de avanzar?
@@ -120,45 +120,46 @@ Después del veredicto, **no** propongas implementación. Si el usuario dice "ok
 ## Lo que esta skill NO hace
 
 - No escribe código. Para eso, después del GO, el usuario invoca el flujo normal.
-- No hace planes detallados de implementación. Para eso, `agent-skills:plan`.
-- No reemplaza a Abogado del Diablo (que es destructivo y más profundo). validador es operativo, rápido, y se mete antes — en el momento exacto en que aparece la idea, no después.
+- No hace planes detallados de implementación. Para eso, después del GO, un planificador por fases (por ejemplo `/planificador`).
+- No reemplaza a un abogado del diablo (una crítica destructiva y más profunda de la idea). validador es operativo, rápido, y se mete antes — en el momento exacto en que aparece la idea, no después.
 - No se activa cuando el usuario pide ayuda con un bug, con un refactor, o con una pregunta. Solo cuando propone construir algo nuevo.
 
 ## Ejemplo del shape de output
 
 ```
 ## 1. Qué entendí
-Quieres añadir un endpoint en Exterior OS para que el frontend pueda
-consultar el historial completo de cambios de un expediente. Asumo que
-eso implica también modelar el storage de los cambios (no lo dijiste,
-pero el endpoint sin storage no tiene de dónde leer).
+Quieres añadir un endpoint para que la web pueda consultar el historial
+completo de cambios de un pedido. Asumo que eso implica también guardar
+esos cambios (no lo dijiste, pero el endpoint sin tabla detrás no tiene
+de dónde leer).
 
 ## 2. Opinión franca
-La idea es buena para auditoría regulatoria, pero estás resolviendo el
+La idea es buena para resolver reclamaciones, pero estás resolviendo el
 caso fácil (lectura) antes de tener el caso difícil resuelto (escritura
 estructurada de los cambios). Mal orden.
 
 ## 3. Mejoras posibles
-- Antes del endpoint, define el schema de la tabla `expediente_cambios`
+- Antes del endpoint, define el schema de la tabla `pedido_cambios`
   (qué se guarda, quién, cuándo, qué transición).
 - Considera si esto debe ser append-only event log o snapshots; afecta
   todo lo demás.
 
 ## 4. Viabilidad técnica
-Con tu stack (Next.js 16 + Supabase + Drizzle) es directo: 1 migración,
-1 trigger en `expediente`, 1 server action. Tiempo realista: 4-6h
+Con tu stack (Next.js + Supabase) es directo: 1 migración,
+1 trigger en `pedidos`, 1 server action. Tiempo realista: 4-6h
 incluyendo tests.
 
 ## 5. Qué se rompe
-- La tabla `expediente` ya tiene 3 sitios que la mutan. Necesitan
-  envolverse en una transacción que escriba también en `expediente_cambios`.
-- Tests de `expediente.update()` van a fallar hasta que se actualicen.
-- El contrato del puente Amigos→Exterior no se ve afectado.
+- La tabla `pedidos` ya tiene 3 sitios que la mutan. Necesitan
+  envolverse en una transacción que escriba también en `pedido_cambios`.
+- Tests de `pedidos.update()` van a fallar hasta que se actualicen.
+- La API que usa la app móvil no se ve afectada.
 
 ## 6. ¿Es prudente AHORA?
-NO. Slice 15 sigue abierto y este trabajo lo amplía 30%. Termina Slice 15
-con el alcance actual, mete esta idea como Slice 16 explícito. Trabajarlo
-ahora alarga el sprint en curso sin ganancia clara esta semana.
+NO. La integración de pagos sigue abierta y este trabajo la amplía 30%.
+Termina pagos con el alcance actual y mete esta idea como la siguiente
+fase explícita. Trabajarlo ahora alarga lo que está en curso sin ganancia
+clara esta semana.
 
-**VEREDICTO: NO-GO** — buena idea, mal momento. Después de cerrar Slice 15.
+**VEREDICTO: NO-GO** — buena idea, mal momento. Después de cerrar pagos.
 ```

@@ -50,7 +50,7 @@ Ventaja: editas el SKILL.md en el repo y los cambios se reflejan al instante.
 /validador
 
 vamos a añadir un endpoint de auditoría que devuelva el historial
-completo de cambios de un expediente
+completo de cambios de un pedido
 ```
 
 ### Disparo automático (frases gatillo)
@@ -69,9 +69,9 @@ Esta skill es **operativa, rápida y pre-decisión**. Es distinta de:
 | Skill | Cuándo |
 |---|---|
 | **validador** | En el momento exacto en que se te ocurre una idea, antes de planear nada |
-| `agent-skills:plan` | Después del GO del validador, para descomponer en tareas |
-| Abogado del Diablo | Para destruir críticamente una idea ya formada — más profundo, más largo |
-| `engineering:architecture` | Para una decisión arquitectónica formal (ADR) |
+| `/planificador` | Después del GO del validador, para descomponer el trabajo en fases |
+| Un abogado del diablo | Para destruir críticamente una idea ya formada — más profundo, más largo |
+| Una revisión de arquitectura | Para una decisión arquitectónica formal (ADR) |
 
 El validador no reemplaza ninguna. Se mete antes que todas.
 
@@ -84,7 +84,7 @@ El validador no reemplaza ninguna. Se mete antes que todas.
 
 ## Ejemplo
 
-Ver [`examples/`](examples/) — caso real procesado de principio a fin.
+Ver [`examples/`](examples/) — un caso típico procesado de principio a fin.
 
 ## Roadmap
 
